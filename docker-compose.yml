@@ -1,0 +1,137 @@
+# Sobe: Postgres da aplicacao + Langfuse v3 self-hosted (web, worker, postgres, clickhouse, redis, minio).
+# Sobe tambem o servidor (`api`, porta 2024). Tambem da para rodar so a infra e o servidor local
+# (`uv run langgraph dev`) — ver README.
+x-langfuse-env: &langfuse-env
+  DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+  SALT: mirante-local-salt
+  ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000" # 64 hex; somente dev local
+  NEXTAUTH_URL: http://localhost:3000
+  NEXTAUTH_SECRET: mirante-local-secret
+  TELEMETRY_ENABLED: "false"
+  CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: clickhouse
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: myredissecret
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: miniosecret
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+
+services:
+  api:
+    build: .
+    ports: ["2024:2024"]
+    env_file: [.env]
+    environment:
+      # Dentro da rede do compose os servicos se enxergam pelo NOME, nao por localhost.
+      DATABASE_URL: postgresql+psycopg://mirante:mirante@db:5432/mirante
+      LANGFUSE_HOST: http://langfuse-web:3000
+    depends_on:
+      db: {condition: service_healthy}
+      langfuse-web: {condition: service_started}
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: mirante
+      POSTGRES_PASSWORD: mirante
+      POSTGRES_DB: mirante
+    ports: ["5432:5432"]
+    volumes:
+      - app-db:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mirante"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  langfuse-web:
+    image: langfuse/langfuse:3
+    restart: unless-stopped
+    depends_on:
+      langfuse-db: {condition: service_healthy}
+      clickhouse: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_started}
+    ports: ["3000:3000"]
+    environment:
+      <<: *langfuse-env
+      # Bootstrap headless: cria org/projeto/usuario/chaves — sem cadastro manual na UI.
+      LANGFUSE_INIT_ORG_ID: mirante
+      LANGFUSE_INIT_ORG_NAME: Mirante
+      LANGFUSE_INIT_PROJECT_ID: modernizer
+      LANGFUSE_INIT_PROJECT_NAME: sql-modernizer
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-mirante-local
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-mirante-local
+      LANGFUSE_INIT_USER_EMAIL: dev@mirante.local
+      LANGFUSE_INIT_USER_NAME: dev
+      LANGFUSE_INIT_USER_PASSWORD: mirante-dev-1234
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    restart: unless-stopped
+    depends_on:
+      langfuse-db: {condition: service_healthy}
+      clickhouse: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_started}
+    environment: *langfuse-env
+
+  langfuse-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes: [langfuse-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes: [clickhouse-data:/var/lib/clickhouse]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    command: --requirepass myredissecret
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a myredissecret ping | grep -q PONG"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: cgr.dev/chainguard/minio  # minio/minio saiu do Docker Hub; o Langfuse usa esta
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniosecret
+    volumes: [minio-data:/data]
+
+volumes:
+  app-db:
+  langfuse-db:
+  clickhouse-data:
+  minio-data:
