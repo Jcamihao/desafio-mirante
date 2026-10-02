@@ -1,0 +1,11 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "modernizer": "./src/mirante/graph/builder.py:graph"
+  },
+  "http": {
+    "app": "./src/mirante/api/app.py:app"
+  },
+  "env": ".env",
+  "python_version": "3.14"
+}
