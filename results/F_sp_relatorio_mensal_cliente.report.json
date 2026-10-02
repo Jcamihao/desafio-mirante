@@ -1,0 +1,241 @@
+{
+  "status": "SUCCESS",
+  "duration_ms": 88564,
+  "meta": {
+    "dialect": "postgres",
+    "attempts": 1,
+    "history_id": "1450a587-f24f-48ac-abc2-9300fb7d60cc",
+    "dependencies": 1,
+    "schema_provided": true,
+    "langfuse_trace_id": "9fe7e88cd3c3d1b4a4fda82053abfc6a"
+  },
+  "errors": [],
+  "parsing": {
+    "kind": "function",
+    "params": [
+      "IN p_cliente_id int8",
+      "IN p_data_inicio date",
+      "IN p_data_fim date"
+    ],
+    "status": "ok",
+    "tables": [
+      "contas",
+      "transacoes"
+    ],
+    "procedure": "sp_relatorio_mensal_cliente",
+    "statements": {
+      "if": 1,
+      "block": 2,
+      "raise": 3,
+      "assign": 1,
+      "return": 1,
+      "return_query": 2
+    },
+    "duration_ms": 11.99,
+    "dependencies": [
+      "fn_saldo_cliente"
+    ]
+  },
+  "analysis": {
+    "risks": [
+      {
+        "code": "RAISE_CAUGHT_BY_OWN_HANDLER",
+        "lines": [
+          6
+        ],
+        "message": "RAISE EXCEPTION dentro do bloco e capturado pelo proprio WHEN OTHERS. O handler NAO re-lanca: a validacao nao propaga erro, e o handler decide o desfecho (ex.: retornar um fallback).",
+        "severity": "high",
+        "recommendation": "Traduzir a estrutura como esta (try/except englobando a validacao); nao 'corrigir' levantando a excecao fora do try, pois muda o comportamento."
+      },
+      {
+        "code": "NESTED_CALL",
+        "lines": [
+          9
+        ],
+        "message": "Chamada a 'fn_saldo_cliente' (definicao fornecida).",
+        "severity": "medium",
+        "recommendation": "Chamar a versao Python ja traduzida (import) em vez de inlining; passar a mesma conexao/transacao."
+      },
+      {
+        "code": "SET_RETURNING",
+        "lines": [
+          12,
+          55
+        ],
+        "message": "Funcao retorna conjunto (RETURN QUERY / RETURNS TABLE): multiplas linhas.",
+        "severity": "medium",
+        "recommendation": "Retornar list[dataclass] com os campos de RETURNS TABLE; o resultado so e devolvido ao final (RETURN QUERY acumula), entao nao usar generator lazy."
+      },
+      {
+        "code": "RECURSIVE_CTE",
+        "lines": [
+          12
+        ],
+        "message": "CTE recursiva (meses, movimento): nao tem equivalente direto.",
+        "severity": "medium",
+        "recommendation": "Manter a query como texto SQL executado pelo banco (equivalencia garantida, 1 round-trip); reescrever em Python so se precisar rodar sem banco."
+      },
+      {
+        "code": "DEGRADED_FALLBACK",
+        "lines": [
+          55
+        ],
+        "message": "O handler engole o erro e retorna um resultado degradado (fallback).",
+        "severity": "medium",
+        "recommendation": "Capturar a excecao, logar (WARNING) com a mensagem original e retornar o mesmo fallback; o chamador nao recebe excecao."
+      },
+      {
+        "code": "RAISE_NULL_FORMAT",
+        "lines": [
+          6
+        ],
+        "message": "1 RAISE EXCEPTION com placeholders %: o PostgreSQL imprime NULL como <NULL> (VERIFICADO), o Python imprimiria None.",
+        "severity": "low",
+        "recommendation": "Formatar None como '<NULL>' nas mensagens; numeros e Decimals com str()."
+      },
+      {
+        "code": "RAISE_LOGGING",
+        "lines": [
+          10,
+          53
+        ],
+        "message": "2 RAISE NOTICE/WARNING: canal de log do banco, nao de erro.",
+        "severity": "low",
+        "recommendation": "Traduzir para logging (NOTICE->info, WARNING->warning); sem excecao."
+      }
+    ],
+    "status": "ok",
+    "constructs": {
+      "ctes": [
+        "meses",
+        "movimento"
+      ],
+      "locks": [],
+      "raises": {
+        "NOTICE": 1,
+        "WARNING": 1,
+        "EXCEPTION": 1
+      },
+      "cursors": [],
+      "in_params": [
+        "p_cliente_id",
+        "p_data_inicio",
+        "p_data_fim"
+      ],
+      "uses_json": false,
+      "variables": 6,
+      "out_params": [],
+      "returns_set": true,
+      "tables_read": [],
+      "calls_builtin": [
+        "count",
+        "date_trunc",
+        "sum"
+      ],
+      "recursive_cte": true,
+      "calls_resolved": [
+        "fn_saldo_cliente"
+      ],
+      "tables_written": {},
+      "calls_unresolved": [],
+      "statement_counts": {
+        "if": 1,
+        "block": 2,
+        "raise": 3,
+        "assign": 1,
+        "return": 1,
+        "return_query": 2
+      },
+      "exception_handlers": [
+        "others"
+      ]
+    },
+    "duration_ms": 3.92,
+    "skipped_rules": [],
+    "risks_by_severity": {
+      "low": 2,
+      "high": 1,
+      "medium": 4
+    }
+  },
+  "generation": {
+    "status": "ok",
+    "attempts": [
+      {
+        "model": "gemini-3.5-flash-lite",
+        "status": "ok",
+        "attempt": 1,
+        "duration_ms": 88420.5,
+        "input_tokens": 2897,
+        "prompt_chars": 5538,
+        "output_tokens": 2084
+      }
+    ],
+    "decisions": [
+      {
+        "topic": "transacao",
+        "choice": "Uso de with conn.begin_nested() englobando a logica e exception handler capturando excecoes",
+        "rationale": "Permite simular o blocoEXCEPTION do PL/pgSQL onde a validacao levanta uma excecao interna que e capturada pelo handler local sem propagar o erro, retornando um fallback."
+      },
+      {
+        "topic": "cursor",
+        "choice": "Retornar uma lista de dataclasses (List[RelatorioMensalClienteRow])",
+        "rationale": "A funcao PL/pgSQL retorna um conjunto de linhas (RETURNS TABLE) acumuladas e devolvidas ao final, mapeadas fielmente para uma lista em Python."
+      },
+      {
+        "topic": "arredondamento",
+        "choice": "Uso de Decimal com quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)",
+        "rationale": "Garante a precisao e o arredondamento monetario exigido por colunas NUMERIC(18,2) do PostgreSQL."
+      },
+      {
+        "topic": "logging",
+        "choice": "Uso do modulo logging para RAISE NOTICE e RAISE WARNING",
+        "rationale": "Preserva o comportamento de emissao de mensagens sem interromper o fluxo quando e warning/notice."
+      }
+    ],
+    "assumptions": [
+      "O tratamento de data_inicio e data_fim nulas pode acontecer em tempo de execucao, portanto verificacoes defensivas foram adicionadas.",
+      "A funcao dependente fn_saldo_cliente esta corretamente implementada e recebe o objeto de conexao ativo."
+    ]
+  },
+  "validation": {
+    "layers": [
+      {
+        "name": "syntax",
+        "detail": "ast.parse em Python 3.14.7",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "lint",
+        "detail": "ruff --select F,E9",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "imports",
+        "detail": "importlib + allowlist; codigo gerado nao e executado",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "policy",
+        "detail": "regras de arquitetura do prompt",
+        "issues": [],
+        "status": "passed"
+      }
+    ],
+    "python": "3.14.7",
+    "status": "passed",
+    "history": [
+      {
+        "errors": 0,
+        "passed": true,
+        "attempt": 1,
+        "failed_layers": []
+      }
+    ],
+    "autofixed": [],
+    "duration_ms": 127.23
+  }
+}

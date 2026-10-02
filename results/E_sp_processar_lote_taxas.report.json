@@ -1,0 +1,244 @@
+{
+  "status": "SUCCESS",
+  "duration_ms": 14612,
+  "meta": {
+    "dialect": "postgres",
+    "attempts": 1,
+    "history_id": "cd7f4a48-7d35-435d-b8f0-876411aaeafd",
+    "dependencies": 0,
+    "schema_provided": true,
+    "langfuse_trace_id": "84d3bbac799a27f2e1c5fde0f340577f"
+  },
+  "errors": [],
+  "parsing": {
+    "kind": "procedure",
+    "params": [
+      "IN p_data_referencia date"
+    ],
+    "status": "ok",
+    "tables": [
+      "contas",
+      "log_auditoria",
+      "taxas",
+      "transacoes"
+    ],
+    "procedure": "sp_processar_lote_taxas",
+    "statements": {
+      "if": 2,
+      "case": 1,
+      "exit": 1,
+      "loop": 1,
+      "open": 1,
+      "block": 1,
+      "close": 1,
+      "fetch": 1,
+      "assign": 6,
+      "return": 1,
+      "execsql": 5,
+      "continue": 1
+    },
+    "duration_ms": 12.58,
+    "dependencies": []
+  },
+  "analysis": {
+    "risks": [
+      {
+        "code": "CURSOR_N_PLUS_1",
+        "lines": [
+          22
+        ],
+        "message": "Cursor 'cur_transacoes' e percorrido linha a linha e cada iteracao executa 1 SELECT e 3 DML (N+1 idas ao banco).",
+        "severity": "high",
+        "recommendation": "Carregar o conjunto em uma unica query (ou lookup em lote das tabelas auxiliares) e processar em memoria; aplicar os DML em lote. Preservar a ordem e o snapshot do cursor (linhas criadas durante o loop nao entram) e manter tudo na mesma transacao."
+      },
+      {
+        "code": "NUMERIC_ROUNDING",
+        "lines": [
+          39,
+          43,
+          44
+        ],
+        "message": "3 atribuicoes a NUMERIC(p,s) com multiplicacao/divisao: o PostgreSQL arredonda a cada atribuicao (half away from zero). Decimal.quantize do Python usa ROUND_HALF_EVEN por padrao.",
+        "severity": "high",
+        "recommendation": "Usar Decimal (nunca float; literais como 100.0 e 1.10 sao numeric no PG) e quantize(Decimal('0.01'), ROUND_HALF_UP) apos CADA atribuicao, na mesma ordem."
+      },
+      {
+        "code": "CHECK_CONSTRAINT",
+        "lines": [
+          50
+        ],
+        "message": "INSERT em transacoes.valor com valor calculado sujeito a CHECK (valor > 0). Dentro de loop sem handler: uma violacao aborta o lote inteiro.",
+        "severity": "high",
+        "recommendation": "Nao 'proteger' com um IF novo: reproduzir o erro do banco (IntegrityError) e o rollback do lote; cobrir em teste o caso limite (ex.: valor = 0)."
+      },
+      {
+        "code": "TRANSACTION_SCOPE",
+        "lines": [
+          48,
+          50,
+          53,
+          72
+        ],
+        "message": "4 comandos DML compartilham a transacao do chamador; a procedure nao faz COMMIT proprio: ou tudo persiste ou nada.",
+        "severity": "medium",
+        "recommendation": "Uma unica unidade de trabalho (transacao) por chamada, com commit no fim e rollback em qualquer excecao; nao commitar por comando."
+      },
+      {
+        "code": "NON_SARGABLE_PREDICATE",
+        "lines": [],
+        "message": "Funcao ['date'] aplicada a coluna no filtro impede uso de indice.",
+        "severity": "low",
+        "recommendation": "Manter a semantica, mas preferir intervalo (col >= d AND col < d + 1) ao reescrever a query; se o SQL for mantido como texto, sinalizar no relatorio."
+      },
+      {
+        "code": "JSON_SERIALIZATION",
+        "lines": [],
+        "message": "Usa jsonb_build_object com variaveis: no psycopg 3 um bind sem tipo inferivel falha em runtime (\"could not determine data type of parameter $N\"; VERIFICADO).",
+        "severity": "low",
+        "recommendation": "Manter jsonb_build_object no SQL e tipar TODO bind dentro dele: CAST(:p AS text), CAST(:n AS numeric), CAST(:d AS date). Se montar em Python, nao converter Decimal para float (perde exatidao)."
+      }
+    ],
+    "status": "ok",
+    "constructs": {
+      "ctes": [],
+      "locks": [],
+      "raises": {},
+      "cursors": [
+        "cur_transacoes"
+      ],
+      "in_params": [
+        "p_data_referencia"
+      ],
+      "uses_json": true,
+      "variables": 10,
+      "out_params": [],
+      "returns_set": false,
+      "tables_read": [
+        "taxas"
+      ],
+      "calls_builtin": [
+        "date",
+        "jsonb_build_object"
+      ],
+      "recursive_cte": false,
+      "calls_resolved": [],
+      "tables_written": {
+        "contas": [
+          "UPDATE"
+        ],
+        "transacoes": [
+          "INSERT"
+        ],
+        "log_auditoria": [
+          "INSERT"
+        ]
+      },
+      "calls_unresolved": [],
+      "statement_counts": {
+        "if": 2,
+        "case": 1,
+        "exit": 1,
+        "loop": 1,
+        "open": 1,
+        "block": 1,
+        "close": 1,
+        "fetch": 1,
+        "assign": 6,
+        "return": 1,
+        "execsql": 5,
+        "continue": 1
+      },
+      "exception_handlers": []
+    },
+    "duration_ms": 2.52,
+    "skipped_rules": [],
+    "risks_by_severity": {
+      "low": 2,
+      "high": 3,
+      "medium": 1
+    }
+  },
+  "generation": {
+    "status": "ok",
+    "attempts": [
+      {
+        "model": "gemini-3.1-flash-lite",
+        "status": "ok",
+        "attempt": 1,
+        "duration_ms": 14459.8,
+        "input_tokens": 3268,
+        "prompt_chars": 6318,
+        "output_tokens": 1655
+      }
+    ],
+    "decisions": [
+      {
+        "topic": "cursor",
+        "choice": "Substituido por fetchall() antes do loop",
+        "rationale": "Resolve o risco N+1, carregando os dados em uma unica query e processando em memoria."
+      },
+      {
+        "topic": "arredondamento",
+        "choice": "Uso de Decimal.quantize(..., ROUND_HALF_UP)",
+        "rationale": "Garante que o arredondamento siga a regra do PostgreSQL (half away from zero) em vez do default do Python (half-even)."
+      },
+      {
+        "topic": "transacao",
+        "choice": "Execucao sem subtransacoes explicitas",
+        "rationale": "A procedure deve ser atomica; o chamador controla a transacao. Erros de integridade (CHECK) propagam naturalmente."
+      },
+      {
+        "topic": "jsonb",
+        "choice": "Uso de CAST explícito nos binds",
+        "rationale": "Evita erro de inferencia de tipo do psycopg 3 dentro de jsonb_build_object."
+      }
+    ],
+    "assumptions": [
+      "Assume-se que a precisao de 18,2 para valores monetarios e 7,4 para percentuais e suficiente para evitar overflow antes do quantize.",
+      "Assume-se que a ordem de processamento (ORDER BY id ASC) e aceitavel para manter a consistencia do lote.",
+      "O uso de 'data_transacao >= :data_inicio AND data_transacao < :data_fim' substitui a funcao DATE() para permitir uso de indices (SARGable)."
+    ]
+  },
+  "validation": {
+    "layers": [
+      {
+        "name": "syntax",
+        "detail": "ast.parse em Python 3.14.7",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "lint",
+        "detail": "ruff --select F,E9",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "imports",
+        "detail": "importlib + allowlist; codigo gerado nao e executado",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "policy",
+        "detail": "regras de arquitetura do prompt",
+        "issues": [],
+        "status": "passed"
+      }
+    ],
+    "python": "3.14.7",
+    "status": "passed",
+    "history": [
+      {
+        "errors": 0,
+        "passed": true,
+        "attempt": 1,
+        "failed_layers": []
+      }
+    ],
+    "autofixed": [
+      "`dataclasses.dataclass` imported but unused"
+    ],
+    "duration_ms": 137.2
+  }
+}

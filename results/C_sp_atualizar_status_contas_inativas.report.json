@@ -1,0 +1,231 @@
+{
+  "status": "SUCCESS",
+  "duration_ms": 113056,
+  "meta": {
+    "dialect": "postgres",
+    "attempts": 1,
+    "history_id": "cac161f5-ff96-403e-b243-e5424313dcfc",
+    "dependencies": 0,
+    "schema_provided": true,
+    "langfuse_trace_id": "fb7f587ebe453d08407c71a0ade9b4ee"
+  },
+  "errors": [],
+  "parsing": {
+    "kind": "procedure",
+    "params": [
+      "IN p_dias int4",
+      "OUT p_afetadas int4"
+    ],
+    "status": "ok",
+    "tables": [
+      "contas",
+      "log_auditoria",
+      "transacoes"
+    ],
+    "procedure": "sp_atualizar_status_contas_inativas",
+    "statements": {
+      "if": 1,
+      "block": 1,
+      "raise": 1,
+      "return": 1,
+      "execsql": 2,
+      "getdiag": 1
+    },
+    "duration_ms": 4.93,
+    "dependencies": []
+  },
+  "analysis": {
+    "risks": [
+      {
+        "code": "TRANSACTION_SCOPE",
+        "lines": [
+          7,
+          19
+        ],
+        "message": "2 comandos DML compartilham a transacao do chamador; a procedure nao faz COMMIT proprio: ou tudo persiste ou nada.",
+        "severity": "medium",
+        "recommendation": "Uma unica unidade de trabalho (transacao) por chamada, com commit no fim e rollback em qualquer excecao; nao commitar por comando."
+      },
+      {
+        "code": "OUT_PARAMS",
+        "lines": [],
+        "message": "Parametros de saida ['p_afetadas'] nao existem em Python.",
+        "severity": "low",
+        "recommendation": "Retornar um dataclass(frozen) com os campos OUT (nome explicito > tupla)."
+      },
+      {
+        "code": "JSON_SERIALIZATION",
+        "lines": [],
+        "message": "Usa jsonb_build_object com variaveis: no psycopg 3 um bind sem tipo inferivel falha em runtime (\"could not determine data type of parameter $N\"; VERIFICADO).",
+        "severity": "low",
+        "recommendation": "Manter jsonb_build_object no SQL e tipar TODO bind dentro dele: CAST(:p AS text), CAST(:n AS numeric), CAST(:d AS date). Se montar em Python, nao converter Decimal para float (perde exatidao)."
+      },
+      {
+        "code": "NON_DETERMINISTIC_TIME",
+        "lines": [],
+        "message": "Depende de NOW() (relogio do banco): resultado muda com o tempo.",
+        "severity": "low",
+        "recommendation": "Manter NOW() no SQL; nao trocar por datetime.now() (fuso/relogio diferentes)."
+      },
+      {
+        "code": "RAISE_NULL_FORMAT",
+        "lines": [
+          4
+        ],
+        "message": "1 RAISE EXCEPTION com placeholders %: o PostgreSQL imprime NULL como <NULL> (VERIFICADO), o Python imprimiria None.",
+        "severity": "low",
+        "recommendation": "Formatar None como '<NULL>' nas mensagens; numeros e Decimals com str()."
+      },
+      {
+        "code": "GET_DIAGNOSTICS",
+        "lines": [
+          17
+        ],
+        "message": "GET DIAGNOSTICS ... ROW_COUNT depende do ultimo comando SQL executado.",
+        "severity": "low",
+        "recommendation": "Usar result.rowcount do comando imediatamente anterior, sem nada no meio."
+      }
+    ],
+    "status": "ok",
+    "constructs": {
+      "ctes": [],
+      "locks": [],
+      "raises": {
+        "EXCEPTION": 1
+      },
+      "cursors": [],
+      "in_params": [
+        "p_dias"
+      ],
+      "uses_json": true,
+      "variables": 0,
+      "out_params": [
+        "p_afetadas"
+      ],
+      "returns_set": false,
+      "tables_read": [],
+      "calls_builtin": [
+        "jsonb_build_object",
+        "now"
+      ],
+      "recursive_cte": false,
+      "calls_resolved": [],
+      "tables_written": {
+        "contas": [
+          "UPDATE"
+        ],
+        "log_auditoria": [
+          "INSERT"
+        ]
+      },
+      "calls_unresolved": [],
+      "statement_counts": {
+        "if": 1,
+        "block": 1,
+        "raise": 1,
+        "return": 1,
+        "execsql": 2,
+        "getdiag": 1
+      },
+      "exception_handlers": []
+    },
+    "duration_ms": 0.9,
+    "skipped_rules": [],
+    "risks_by_severity": {
+      "low": 5,
+      "high": 0,
+      "medium": 1
+    }
+  },
+  "generation": {
+    "status": "ok",
+    "attempts": [
+      {
+        "model": "gemini-3.5-flash",
+        "status": "ok",
+        "attempt": 1,
+        "duration_ms": 112994.9,
+        "input_tokens": 2278,
+        "prompt_chars": 3638,
+        "output_tokens": 5194
+      }
+    ],
+    "decisions": [
+      {
+        "topic": "transaction_scope",
+        "choice": "No commit or rollback is performed inside the function.",
+        "rationale": "Adheres to the TRANSACTION_SCOPE risk where the caller owns the transaction, ensuring atomicity of the UPDATE and INSERT operations."
+      },
+      {
+        "topic": "out_params",
+        "choice": "Returned a frozen dataclass SpAtualizarStatusContasInativasResult containing p_afetadas.",
+        "rationale": "Addresses the OUT_PARAMS risk by providing a structured, immutable return type instead of a tuple."
+      },
+      {
+        "topic": "json_serialization",
+        "choice": "Used explicit CAST inside jsonb_build_object for bind parameters.",
+        "rationale": "Addresses the JSON_SERIALIZATION risk where psycopg 3 cannot infer the type of parameters inside polymorphic functions like jsonb_build_object."
+      },
+      {
+        "topic": "non_deterministic_time",
+        "choice": "Kept NOW() in the SQL query.",
+        "rationale": "Addresses the NON_DETERMINISTIC_TIME risk to ensure the database's time zone and clock are used consistently."
+      },
+      {
+        "topic": "raise_null_format",
+        "choice": "Formatted None as <NULL> in the exception message.",
+        "rationale": "Addresses the RAISE_NULL_FORMAT risk to match PostgreSQL's behavior of printing NULL as <NULL>."
+      },
+      {
+        "topic": "get_diagnostics",
+        "choice": "Used result.rowcount immediately after the UPDATE execution.",
+        "rationale": "Addresses the GET_DIAGNOSTICS risk by capturing the row count of the exact preceding DML statement."
+      }
+    ],
+    "assumptions": [
+      "Assumed that the caller manages the transaction lifecycle (commit/rollback).",
+      "Assumed that p_dias can be NULL, which triggers the validation exception.",
+      "Assumed that the database timezone is correctly configured since NOW() is used directly in SQL."
+    ]
+  },
+  "validation": {
+    "layers": [
+      {
+        "name": "syntax",
+        "detail": "ast.parse em Python 3.14.7",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "lint",
+        "detail": "ruff --select F,E9",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "imports",
+        "detail": "importlib + allowlist; codigo gerado nao e executado",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "policy",
+        "detail": "regras de arquitetura do prompt",
+        "issues": [],
+        "status": "passed"
+      }
+    ],
+    "python": "3.14.7",
+    "status": "passed",
+    "history": [
+      {
+        "errors": 0,
+        "passed": true,
+        "attempt": 1,
+        "failed_layers": []
+      }
+    ],
+    "autofixed": [],
+    "duration_ms": 55.27
+  }
+}

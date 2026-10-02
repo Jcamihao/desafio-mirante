@@ -1,0 +1,203 @@
+{
+  "id": "6bc0383f-af04-41e8-9775-e051d8a8da2e",
+  "created_at": null,
+  "model": "gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.5-flash-lite",
+  "metrics": {
+    "cases": 5,
+    "syntax_rate": 1.0,
+    "lint_rate": 1.0,
+    "imports_rate": 1.0,
+    "policy_rate": 1.0,
+    "valid_rate": 1.0,
+    "generation_rate": 1.0,
+    "quality_rate": 1.0,
+    "first_attempt_rate": 1.0,
+    "repair_gain": 0.0,
+    "naive_gap": 0.0,
+    "risk_recall": 1.0,
+    "avg_attempts": 1.0,
+    "input_tokens": 13248,
+    "output_tokens": 25270,
+    "total_duration_ms": 298043
+  },
+  "results": [
+    {
+      "case": "B",
+      "procedure": "fn_saldo_cliente",
+      "status": "SUCCESS",
+      "attempts": 1,
+      "models": [
+        "gemini-3.5-flash"
+      ],
+      "first_attempt_valid": true,
+      "final_valid": true,
+      "layers": {
+        "lint": true,
+        "policy": true,
+        "syntax": true,
+        "imports": true
+      },
+      "expected_risks": [],
+      "detected_risks": [],
+      "missed_risks": [],
+      "input_tokens": 1437,
+      "output_tokens": 2181,
+      "duration_ms": 26611,
+      "history_id": "816f6190-7e48-4a38-8dba-883433ccdec7",
+      "trace_id": "5dd6b41c00de045bc5ac7de143098b4c",
+      "errors": []
+    },
+    {
+      "case": "C",
+      "procedure": "sp_atualizar_status_contas_inativas",
+      "status": "SUCCESS",
+      "attempts": 1,
+      "models": [
+        "gemini-3.5-flash"
+      ],
+      "first_attempt_valid": true,
+      "final_valid": true,
+      "layers": {
+        "lint": true,
+        "policy": true,
+        "syntax": true,
+        "imports": true
+      },
+      "expected_risks": [
+        "GET_DIAGNOSTICS",
+        "NON_DETERMINISTIC_TIME",
+        "OUT_PARAMS"
+      ],
+      "detected_risks": [
+        "GET_DIAGNOSTICS",
+        "JSON_SERIALIZATION",
+        "NON_DETERMINISTIC_TIME",
+        "OUT_PARAMS",
+        "RAISE_NULL_FORMAT",
+        "TRANSACTION_SCOPE"
+      ],
+      "missed_risks": [],
+      "input_tokens": 2278,
+      "output_tokens": 5194,
+      "duration_ms": 113056,
+      "history_id": "cac161f5-ff96-403e-b243-e5424313dcfc",
+      "trace_id": "fb7f587ebe453d08407c71a0ade9b4ee",
+      "errors": []
+    },
+    {
+      "case": "D",
+      "procedure": "sp_transferir_entre_contas",
+      "status": "SUCCESS",
+      "attempts": 1,
+      "models": [
+        "gemini-3.5-flash"
+      ],
+      "first_attempt_valid": true,
+      "final_valid": true,
+      "layers": {
+        "lint": true,
+        "policy": true,
+        "syntax": true,
+        "imports": true
+      },
+      "expected_risks": [
+        "HANDLER_WRITES_ROLLED_BACK",
+        "NULL_COMPARISON",
+        "ROW_LOCK"
+      ],
+      "detected_risks": [
+        "CHECK_CONSTRAINT",
+        "HANDLER_WRITES_ROLLED_BACK",
+        "JSON_SERIALIZATION",
+        "NULL_COMPARISON",
+        "RAISE_CAUGHT_BY_OWN_HANDLER",
+        "RAISE_NULL_FORMAT",
+        "ROW_LOCK",
+        "SUBTRANSACTION_ROLLBACK",
+        "TRANSACTION_SCOPE"
+      ],
+      "missed_risks": [],
+      "input_tokens": 3368,
+      "output_tokens": 14156,
+      "duration_ms": 55200,
+      "history_id": "4bff28d1-2e44-42ed-a52a-f0431b66ef3c",
+      "trace_id": "f2428cced15b9debebafbe3d2fe3b2c9",
+      "errors": []
+    },
+    {
+      "case": "E",
+      "procedure": "sp_processar_lote_taxas",
+      "status": "SUCCESS",
+      "attempts": 1,
+      "models": [
+        "gemini-3.1-flash-lite"
+      ],
+      "first_attempt_valid": true,
+      "final_valid": true,
+      "layers": {
+        "lint": true,
+        "policy": true,
+        "syntax": true,
+        "imports": true
+      },
+      "expected_risks": [
+        "CHECK_CONSTRAINT",
+        "CURSOR_N_PLUS_1",
+        "NUMERIC_ROUNDING"
+      ],
+      "detected_risks": [
+        "CHECK_CONSTRAINT",
+        "CURSOR_N_PLUS_1",
+        "JSON_SERIALIZATION",
+        "NON_SARGABLE_PREDICATE",
+        "NUMERIC_ROUNDING",
+        "TRANSACTION_SCOPE"
+      ],
+      "missed_risks": [],
+      "input_tokens": 3268,
+      "output_tokens": 1655,
+      "duration_ms": 14612,
+      "history_id": "cd7f4a48-7d35-435d-b8f0-876411aaeafd",
+      "trace_id": "84d3bbac799a27f2e1c5fde0f340577f",
+      "errors": []
+    },
+    {
+      "case": "F",
+      "procedure": "sp_relatorio_mensal_cliente",
+      "status": "SUCCESS",
+      "attempts": 1,
+      "models": [
+        "gemini-3.5-flash-lite"
+      ],
+      "first_attempt_valid": true,
+      "final_valid": true,
+      "layers": {
+        "lint": true,
+        "policy": true,
+        "syntax": true,
+        "imports": true
+      },
+      "expected_risks": [
+        "NESTED_CALL",
+        "RAISE_CAUGHT_BY_OWN_HANDLER",
+        "RECURSIVE_CTE"
+      ],
+      "detected_risks": [
+        "DEGRADED_FALLBACK",
+        "NESTED_CALL",
+        "RAISE_CAUGHT_BY_OWN_HANDLER",
+        "RAISE_LOGGING",
+        "RAISE_NULL_FORMAT",
+        "RECURSIVE_CTE",
+        "SET_RETURNING"
+      ],
+      "missed_risks": [],
+      "input_tokens": 2897,
+      "output_tokens": 2084,
+      "duration_ms": 88564,
+      "history_id": "1450a587-f24f-48ac-abc2-9300fb7d60cc",
+      "trace_id": "9fe7e88cd3c3d1b4a4fda82053abfc6a",
+      "errors": []
+    }
+  ]
+}

@@ -1,0 +1,548 @@
+[
+  {
+    "annex": "B",
+    "scenario": "soma so as contas ativas",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "150"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "150"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "B",
+    "scenario": "ignora conta inativa",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "30"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "30"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "B",
+    "scenario": "cliente inexistente retorna 0",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "0"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "0"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "C",
+    "scenario": "inativa contas sem movimento ha 30 dias",
+    "targets": "OUT params, ROW_COUNT",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "2"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "2"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "C",
+    "scenario": "janela grande inativa menos contas",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "1"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "1"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "C",
+    "scenario": "p_dias zero levanta erro",
+    "targets": "RAISE com %",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Parametro p_dias deve ser positivo, recebido: 0"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Parametro p_dias deve ser positivo, recebido: 0",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "C",
+    "scenario": "p_dias NULL: mensagem mostra <NULL>",
+    "targets": "NULL em RAISE",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Parametro p_dias deve ser positivo, recebido: <NULL>"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Parametro p_dias deve ser positivo, recebido: <NULL>",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "transferencia valida",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": []
+    },
+    "generated": {
+      "ok": true,
+      "rows": []
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "saldo insuficiente (log de erro nao persiste)",
+    "targets": "achado 2: handler grava e re-lanca",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Saldo insuficiente: saldo=100.00 valor=500.00"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Saldo insuficiente: saldo=100.00 valor=500.00",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "destino inexistente: NULL <> 'ATIVA' nao dispara",
+    "targets": "achado 3: logica de 3 valores; FK violada depois",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "23503",
+        "message": "insert or update on table \"transacoes\" violates foreign key constraint \"transacoes_conta_destino_id_fkey\""
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "IntegrityError",
+        "message": "(psycopg.errors.ForeignKeyViolation) insert or update on table \"transacoes\" violates foreign key constraint \"transacoes_conta_destino_id_fkey\"\nDETAIL:  Key (conta_destino_id)=(999) is not present in table \"contas\".\n[SQL: \n                        INSERT INTO transacoes (conta_origem_id, conta_destino_id, tipo, valor)\n                        VALUES (%(p_conta_origem)s, %(p_conta_destino)s, 'TRANSFERENCIA', %(p_valor)s)\n                    ]\n[parameters: {'p_conta_origem': 1, 'p_conta_destino': 999, 'p_valor': Decimal('10.00')}]\n(Background on this error at: https://sqlalche.me/e/21/gkpj)",
+        "sqlstate": "23503"
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "origem inexistente",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Conta de origem 999 nao encontrada"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Conta de origem 999 nao encontrada",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "destino inativo",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Ambas as contas precisam estar ATIVAS"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Ambas as contas precisam estar ATIVAS",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "origem igual ao destino",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Conta de origem e destino nao podem ser iguais"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Conta de origem e destino nao podem ser iguais",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "valor zero",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Valor invalido para transferencia: 0.00"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Valor invalido para transferencia: 0.00",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "D",
+    "scenario": "valor NULL",
+    "targets": "NULL em RAISE",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "P0001",
+        "message": "Valor invalido para transferencia: <NULL>"
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "ProcedureError",
+        "message": "Valor invalido para transferencia: <NULL>",
+        "sqlstate": null
+      }
+    }
+  },
+  {
+    "annex": "E",
+    "scenario": "lote com empate de arredondamento (40,20 x 2,5% = 1,005)",
+    "targets": "achado 4: half-up x half-even; N+1",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": []
+    },
+    "generated": {
+      "ok": true,
+      "rows": []
+    }
+  },
+  {
+    "annex": "E",
+    "scenario": "taxa zero viola CHECK e aborta o lote",
+    "targets": "achado 5",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": false,
+      "error": {
+        "sqlstate": "23514",
+        "message": "new row for relation \"transacoes\" violates check constraint \"transacoes_valor_check\""
+      }
+    },
+    "generated": {
+      "ok": false,
+      "error": {
+        "type": "IntegrityError",
+        "message": "(psycopg.errors.CheckViolation) new row for relation \"transacoes\" violates check constraint \"transacoes_valor_check\"\nDETAIL:  Failing row contains (7, 1, null, TARIFA, 0.00, 2026-10-01 13:46:38.845503, EFETIVADA).\n[SQL: INSERT INTO transacoes (conta_origem_id, tipo, valor, status) VALUES (%(origem)s, 'TARIFA', %(taxa)s, 'EFETIVADA')]\n[parameters: {'origem': 1, 'taxa': Decimal('0.00')}]\n(Background on this error at: https://sqlalche.me/e/21/gkpj)",
+        "sqlstate": "23514"
+      }
+    }
+  },
+  {
+    "annex": "E",
+    "scenario": "data sem transacoes so registra o lote",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": []
+    },
+    "generated": {
+      "ok": true,
+      "rows": []
+    }
+  },
+  {
+    "annex": "F",
+    "scenario": "periodo de varios meses (incl. mes sem movimento)",
+    "targets": "CTE recursiva, SETOF",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "100",
+          "40",
+          "210",
+          "2"
+        ],
+        [
+          "2026-02-01",
+          "0",
+          "0",
+          "150",
+          "0"
+        ],
+        [
+          "2026-03-01",
+          "0",
+          "15",
+          "135",
+          "1"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "100",
+          "40",
+          "210",
+          "2"
+        ],
+        [
+          "2026-02-01",
+          "0",
+          "0",
+          "150",
+          "0"
+        ],
+        [
+          "2026-03-01",
+          "0",
+          "15",
+          "135",
+          "1"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "F",
+    "scenario": "periodo invertido cai no fallback, sem erro",
+    "targets": "achado 1: RAISE capturado pelo proprio handler",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-03-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-03-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "F",
+    "scenario": "cliente sem contas",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-02-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-02-01",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    }
+  },
+  {
+    "annex": "F",
+    "scenario": "um unico mes",
+    "targets": "",
+    "passed": true,
+    "diffs": [],
+    "original": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "100",
+          "40",
+          "210",
+          "2"
+        ]
+      ]
+    },
+    "generated": {
+      "ok": true,
+      "rows": [
+        [
+          "2026-01-01",
+          "100",
+          "40",
+          "210",
+          "2"
+        ]
+      ]
+    }
+  }
+]

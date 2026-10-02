@@ -1,0 +1,280 @@
+{
+  "status": "SUCCESS",
+  "duration_ms": 55200,
+  "meta": {
+    "dialect": "postgres",
+    "attempts": 1,
+    "history_id": "4bff28d1-2e44-42ed-a52a-f0431b66ef3c",
+    "dependencies": 0,
+    "schema_provided": true,
+    "langfuse_trace_id": "f2428cced15b9debebafbe3d2fe3b2c9"
+  },
+  "errors": [],
+  "parsing": {
+    "kind": "procedure",
+    "params": [
+      "IN p_conta_origem int8",
+      "IN p_conta_destino int8",
+      "IN p_valor numeric(18,2)"
+    ],
+    "status": "ok",
+    "tables": [
+      "contas",
+      "log_auditoria",
+      "transacoes"
+    ],
+    "procedure": "sp_transferir_entre_contas",
+    "statements": {
+      "if": 5,
+      "block": 2,
+      "raise": 6,
+      "return": 1,
+      "execsql": 7
+    },
+    "duration_ms": 6.79,
+    "dependencies": []
+  },
+  "analysis": {
+    "risks": [
+      {
+        "code": "HANDLER_WRITES_ROLLED_BACK",
+        "lines": [
+          53
+        ],
+        "message": "O handler grava (ex.: log de erro) e re-lanca. VERIFICADO no PostgreSQL 16: o erro que sai da procedure desfaz a chamada INTEIRA, inclusive essa escrita, mesmo que o chamador capture o erro (EXCEPTION ou SAVEPOINT): 0 linhas persistem. O log de erro, na pratica, nunca e gravado.",
+        "severity": "high",
+        "recommendation": "Reproduzir: envolver a funcao inteira (try/except incluso) em `with conn.begin_nested():`; o erro que propaga desfaz tudo, handler incluso. NAO gravar o log fora do savepoint nem em transacao separada: ele persistiria e o PostgreSQL nao persiste."
+      },
+      {
+        "code": "SUBTRANSACTION_ROLLBACK",
+        "lines": [
+          6
+        ],
+        "message": "Bloco com EXCEPTION e uma subtransacao: ao entrar no handler, os efeitos DML do bloco sao desfeitos.",
+        "severity": "medium",
+        "recommendation": "try: with conn.begin_nested(): <corpo> / except: <handler>. O handler roda depois do rollback do savepoint do corpo. Se o handler NAO re-lanca (retorna um fallback), suas escritas persistem normalmente."
+      },
+      {
+        "code": "RAISE_CAUGHT_BY_OWN_HANDLER",
+        "lines": [
+          8,
+          12,
+          22,
+          26,
+          30
+        ],
+        "message": "RAISE EXCEPTION dentro do bloco e capturado pelo proprio WHEN OTHERS. O handler registra e re-lanca, entao o erro ainda propaga.",
+        "severity": "medium",
+        "recommendation": "Traduzir a estrutura como esta (try/except englobando a validacao); nao 'corrigir' levantando a excecao fora do try, pois muda o comportamento."
+      },
+      {
+        "code": "ROW_LOCK",
+        "lines": [
+          15,
+          18
+        ],
+        "message": "2 SELECT ... FOR UPDATE em ['contas', 'contas']: o lock so vale dentro de uma transacao ativa e a ordem de aquisicao define risco de deadlock.",
+        "severity": "medium",
+        "recommendation": "Manter o FOR UPDATE no SQL (texto) dentro de uma unica transacao; se varias linhas forem travadas, travar em ordem deterministica (ex.: por id) — a ordem original (origem, depois destino) pode causar deadlock em transferencias cruzadas."
+      },
+      {
+        "code": "NULL_COMPARISON",
+        "lines": [
+          25
+        ],
+        "message": "Condicao compara ['v_status_destino', 'v_status_origem'], preenchidas por SELECT INTO: se nenhuma linha for encontrada ficam NULL, e 'NULL <> x' e NULL (tratado como falso, o IF nao dispara). Em Python, None != x e True.",
+        "severity": "medium",
+        "recommendation": "Modelar a logica de tres valores: ausencia de linha => None, e a comparacao com None nao deve entrar no ramo. Testar o caso 'linha inexistente'."
+      },
+      {
+        "code": "TRANSACTION_SCOPE",
+        "lines": [
+          33,
+          34,
+          36,
+          39,
+          53
+        ],
+        "message": "5 comandos DML compartilham a transacao do chamador; a procedure nao faz COMMIT proprio: ou tudo persiste ou nada.",
+        "severity": "medium",
+        "recommendation": "Uma unica unidade de trabalho (transacao) por chamada, com commit no fim e rollback em qualquer excecao; nao commitar por comando."
+      },
+      {
+        "code": "JSON_SERIALIZATION",
+        "lines": [],
+        "message": "Usa jsonb_build_object com variaveis: no psycopg 3 um bind sem tipo inferivel falha em runtime (\"could not determine data type of parameter $N\"; VERIFICADO).",
+        "severity": "low",
+        "recommendation": "Manter jsonb_build_object no SQL e tipar TODO bind dentro dele: CAST(:p AS text), CAST(:n AS numeric), CAST(:d AS date). Se montar em Python, nao converter Decimal para float (perde exatidao)."
+      },
+      {
+        "code": "RAISE_NULL_FORMAT",
+        "lines": [
+          8,
+          22,
+          30
+        ],
+        "message": "3 RAISE EXCEPTION com placeholders %: o PostgreSQL imprime NULL como <NULL> (VERIFICADO), o Python imprimiria None.",
+        "severity": "low",
+        "recommendation": "Formatar None como '<NULL>' nas mensagens; numeros e Decimals com str()."
+      },
+      {
+        "code": "CHECK_CONSTRAINT",
+        "lines": [
+          36
+        ],
+        "message": "INSERT em transacoes.valor com valor calculado sujeito a CHECK (valor > 0). ",
+        "severity": "low",
+        "recommendation": "Nao 'proteger' com um IF novo: reproduzir o erro do banco (IntegrityError) e o rollback do lote; cobrir em teste o caso limite (ex.: valor = 0)."
+      }
+    ],
+    "status": "ok",
+    "constructs": {
+      "ctes": [],
+      "locks": [
+        "contas FOR UPDATE",
+        "contas FOR UPDATE"
+      ],
+      "raises": {
+        "EXCEPTION": 6
+      },
+      "cursors": [],
+      "in_params": [
+        "p_conta_origem",
+        "p_conta_destino",
+        "p_valor"
+      ],
+      "uses_json": true,
+      "variables": 3,
+      "out_params": [],
+      "returns_set": false,
+      "tables_read": [
+        "contas"
+      ],
+      "calls_builtin": [
+        "jsonb_build_object"
+      ],
+      "recursive_cte": false,
+      "calls_resolved": [],
+      "tables_written": {
+        "contas": [
+          "UPDATE"
+        ],
+        "transacoes": [
+          "INSERT"
+        ],
+        "log_auditoria": [
+          "INSERT"
+        ]
+      },
+      "calls_unresolved": [],
+      "statement_counts": {
+        "if": 5,
+        "block": 2,
+        "raise": 6,
+        "return": 1,
+        "execsql": 7
+      },
+      "exception_handlers": [
+        "others"
+      ]
+    },
+    "duration_ms": 2.09,
+    "skipped_rules": [],
+    "risks_by_severity": {
+      "low": 3,
+      "high": 1,
+      "medium": 5
+    }
+  },
+  "generation": {
+    "status": "ok",
+    "attempts": [
+      {
+        "model": "gemini-3.5-flash",
+        "status": "ok",
+        "attempt": 1,
+        "duration_ms": 55133.9,
+        "input_tokens": 3368,
+        "prompt_chars": 7344,
+        "output_tokens": 14156
+      }
+    ],
+    "decisions": [
+      {
+        "topic": "transacao",
+        "choice": "Uso de begin_nested() duplo (externo e interno)",
+        "rationale": "Aborda o risco HANDLER_WRITES_ROLLED_BACK e SUBTRANSACTION_ROLLBACK. O savepoint interno simula o bloco BEGIN...EXCEPTION (desfazendo DMLs do corpo se houver erro). O savepoint externo garante que, se o erro propagar para fora da procedure, as escritas do handler de erro também sejam desfeitas, reproduzindo fielmente o comportamento do PostgreSQL 16."
+      },
+      {
+        "topic": "cursor",
+        "choice": "Bloqueio determinístico de linhas (SELECT FOR UPDATE ordenado)",
+        "rationale": "Aborda o risco ROW_LOCK. Para evitar deadlocks em transferências concorrentes cruzadas (A para B e B para A), as contas são bloqueadas em ordem crescente de ID."
+      },
+      {
+        "topic": "arredondamento",
+        "choice": "Quantização imediata de p_valor",
+        "rationale": "Garante que o parâmetro p_valor (numeric(18,2)) seja arredondado usando ROUND_HALF_UP para 2 casas decimais logo no início da execução."
+      },
+      {
+        "topic": "null_semantics",
+        "choice": "Tratamento de lógica de três valores (SQL NULL)",
+        "rationale": "Aborda o risco NULL_COMPARISON. A validação de status foi escrita para garantir que, se v_status_destino for NULL (conta destino inexistente), a comparação não dispare incorretamente a exceção de status inativo, preservando o comportamento original."
+      },
+      {
+        "topic": "json_serialization",
+        "choice": "Casts explícitos dentro de jsonb_build_object",
+        "rationale": "Aborda o risco JSON_SERIALIZATION. Evita falhas de runtime no psycopg 3 ao inferir tipos de parâmetros dinâmicos dentro de funções polimórficas do PostgreSQL."
+      },
+      {
+        "topic": "raise_null_format",
+        "choice": "Helper _fmt para formatação de NULL",
+        "rationale": "Aborda o risco RAISE_NULL_FORMAT. Garante que valores nulos (None) sejam impressos como '<NULL>' nas mensagens de erro, idêntico ao comportamento do PostgreSQL."
+      }
+    ],
+    "assumptions": [
+      "Assume-se que o chamador gerencia a transação principal (commit/rollback).",
+      "Se a conta de destino não existir, o comportamento original de não lançar erro de inexistência para ela (apenas para a origem) e atualizar 0 linhas silenciosamente foi mantido.",
+      "Assume-se que a tabela 'transacoes' possui uma check constraint para 'valor > 0' que lançará uma exceção do banco caso violada, a qual será capturada e logada pelo handler."
+    ]
+  },
+  "validation": {
+    "layers": [
+      {
+        "name": "syntax",
+        "detail": "ast.parse em Python 3.14.7",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "lint",
+        "detail": "ruff --select F,E9",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "imports",
+        "detail": "importlib + allowlist; codigo gerado nao e executado",
+        "issues": [],
+        "status": "passed"
+      },
+      {
+        "name": "policy",
+        "detail": "regras de arquitetura do prompt",
+        "issues": [],
+        "status": "passed"
+      }
+    ],
+    "python": "3.14.7",
+    "status": "passed",
+    "history": [
+      {
+        "errors": 0,
+        "passed": true,
+        "attempt": 1,
+        "failed_layers": []
+      }
+    ],
+    "autofixed": [],
+    "duration_ms": 57.59
+  }
+}
